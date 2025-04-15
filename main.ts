@@ -1,4 +1,232 @@
 
+
+//% color="#0000BB" weight=99  block="Odometry"
+namespace odometry {
+    // Global variables for position tracking
+    export let X = 0;           // X position in mm
+    export let Y = 0;           // Y position in mm  
+    export let alphaRad = 0;       // Orientation angle in radians
+
+    // Constants - adjust these based on your robot's specifications
+    export let entraxeInMM = 100;  // Distance between wheels in mm
+    export let ticksPerMeter = 2000;   // Number of ticks per meter
+
+    // Variables to store encoder deltas
+    let dRight = 0;
+    let dLeft = 0;
+
+    /**
+     * Initialize the odometry module with specific parameters
+     * @param trackWidth Distance between encoders' wheels in mm
+     * @param ticksPerMeter Number of encoder ticks per meter
+     */
+    //% block="initialize odometry with trackWidth %trackWidth|mm and %ticksPerMeter|ticks per meter"
+    export function initialize(entraxe_mm: number, nbticksPerMeter: number) {
+        // Convert trackWidth from mm to ticks
+        odometry.entraxeInMM = entraxe_mm;//* nbticksPerMeter / 1000;
+        odometry.ticksPerMeter = nbticksPerMeter;
+        X = 0;
+        Y = 0;
+        alphaRad = 0;
+    }
+
+    /**
+     * Reset position and orientation to zero
+     */
+    //% block="reset odometry"
+    export function reset() {
+        X = 0;
+        Y = 0;
+        alphaRad = 0;
+    }
+
+    /**
+     * Set position and orientation to specific values
+     * @param x X position in mm
+     * @param y Y position in mm
+     * @param angle Orientation in radians
+     */
+    //% block="set position to x: %x|y: %y|angle: %angle"
+    export function setPosition(x: number, y: number, anglerad: number) {
+        X = x;
+        Y = y;
+        alphaRad = anglerad;
+    }
+
+    /**
+     * Update odometry with new encoder values
+     * @param rightDelta Right encoder delta in ticks
+     * @param leftDelta Left encoder delta in ticks
+     */
+    /*
+    //% block="update with right delta: %rightDelta|left delta: %leftDelta"
+    export function update(leftDelta: number, rightDelta: number) {
+        dRight = rightDelta;
+        dLeft = leftDelta;
+
+        // Calculate angle and distance variations
+        let dAlpha = (dRight - dLeft) / 2;         // Variation of the angle in radians
+        let dDelta = (dRight + dLeft) / 2;         // Variation of the forward movement
+
+        // Convert to radians and update angle
+        alphaRad += dAlpha / entraxe_tick;
+
+        // Keep alpha within [-π, π] range
+        while (alphaRad > Math.PI) {
+            alphaRad -= 2 * Math.PI;
+        }
+        while (alphaRad < -Math.PI) {
+            alphaRad += 2 * Math.PI;
+        }
+
+        // Calculate position offsets
+        let dX = Math.cos(alphaRad) * dDelta;
+        let dY = Math.sin(alphaRad) * dDelta;
+
+        // Update position in mm
+        X += dX * 1000 / ticksPerMeter;  // Convert from ticks to mm
+        Y += dY * 1000 / ticksPerMeter;  // Convert from ticks to mm
+    }*/
+
+    /**
+     * Update odometry with new encoder values in mm
+     * @param rightDeltaMm Right encoder delta in mm
+     * @param leftDeltaMm Left encoder delta in mm
+     */
+    //% block="update with leftDelta: %leftDeltaMm|mm + rightDelta: %rightDeltaMm|mm "
+    export function update(leftDeltaMm: number, rightDeltaMm: number) {
+        // Calculate distance traveled and angle variation
+        let deltaDist = (leftDeltaMm + rightDeltaMm) / 2;
+        let diffCount = rightDeltaMm - leftDeltaMm;
+        let deltaTheta = diffCount / entraxeInMM; // In radians
+
+        if (diffCount == 0) {
+            // Consider movement as a straight line
+            // Update position
+            X += deltaDist * Math.cos(alphaRad);
+            Y += deltaDist * Math.sin(alphaRad);
+        } else {
+            // Approximate by considering that the robot follows an arc
+            // Calculate the radius of curvature of the circle
+            let R = deltaDist / deltaTheta;
+
+            // Update position
+            X += R * (-Math.sin(alphaRad) + Math.sin(alphaRad + deltaTheta));
+            Y += R * (Math.cos(alphaRad) - Math.cos(alphaRad + deltaTheta));
+
+            // Update heading
+            alphaRad += deltaTheta;
+
+            // Limit heading to +/- PI to be able to turn in both directions
+            if (alphaRad > Math.PI) {
+                alphaRad -= 2 * Math.PI;
+            } else if (alphaRad <= -Math.PI) {
+                alphaRad += 2 * Math.PI;
+            }
+        }
+    }
+
+    /**
+     * Update odometry with new encoder values in ticks
+     * @param rightDeltaTicks Right encoder delta in ticks
+     * @param leftDeltaTicks Left encoder delta in ticks
+     */
+    //% block="update with leftDelta: %leftDeltaTicks|ticks + rightDelta: %rightDeltaTicks|ticks"
+    export function updateFromTicks(leftDeltaTicks: number, rightDeltaTicks: number) {
+        // Convert ticks to mm
+        let rightDeltaMm = rightDeltaTicks * 1000 / ticksPerMeter;
+        let leftDeltaMm = leftDeltaTicks * 1000 / ticksPerMeter;
+
+        // Call the regular update function
+        update(leftDeltaMm, rightDeltaMm);
+    }
+
+    /**
+     * Get current X position in float mm
+     */
+    //% block="get X position (float mm)"
+    export function getX(): number {
+        return X;
+    }
+
+    /**
+     * Get current X position round in mm
+     */
+    //% block="get X position (integer mm)"
+    export function getXint(): number {
+        return Math.floor(X);
+    }
+
+    /**
+     * Get current Y position in float mm
+     */
+    //% block="get Y position (float mm)"
+    export function getY(): number {
+        return Y;
+    }
+
+    /**
+     * Get current Y position round in mm
+     */
+    //% block="get Y position (integer mm)"
+    export function getYint(): number {
+        return Math.floor(Y);
+    }
+
+    /**
+     * Get current orientation in radians
+     */
+    //% block="get orientation (radians)"
+    export function getOrientationRad(): number {
+        return alphaRad;
+    }
+
+    /**
+     * Get current orientation in degrees
+     */
+    //% block="get orientation (degrees)"
+    export function getOrientationDegrees(): number {
+        return alphaRad * 180 / Math.PI;
+    }
+
+    /**
+     * Calculate distance to a point
+     * @param x X coordinate of the target point
+     * @param y Y coordinate of the target point
+     */
+    //% block="distance to point x: %x|y: %y"
+    export function distanceTo(x: number, y: number): number {
+        let dx = x - X;
+        let dy = y - Y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * Calculate angle in radians to a point (relative to current orientation)
+     * @param x X coordinate of the target point
+     * @param y Y coordinate of the target point
+     */
+    //% block="angle to point x: %x|y: %y"
+    export function angleTo(x: number, y: number): number {
+        let dx2 = x - X;
+        let dy2 = y - Y;
+        let targetAngle = Math.atan2(dy2, dx2);
+
+        // Calculate the difference and normalize to [-π, π]
+        let angleDiff = targetAngle - alphaRad;
+        while (angleDiff > Math.PI) {
+            angleDiff -= 2 * Math.PI;
+        }
+        while (angleDiff < -Math.PI) {
+            angleDiff += 2 * Math.PI;
+        }
+
+        return angleDiff;
+    }
+}
+
+
+
 /**
  * Namespace pour le contrôle du déplacement d'un robot microbit
  * Utilise l'odométrie et les encodeurs magnétiques pour le positionnement précis

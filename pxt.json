@@ -4,8 +4,7 @@
     "dependencies": {
         "core": "*",
         "radio": "*",
-        "microphone": "*",
-        "pxt-ams_as5048b": "github:cho934/pxt-ams_as5048b#master"
+        "microphone": "*"
     },
     "files": [
         "main.blocks",
