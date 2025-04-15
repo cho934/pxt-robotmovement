@@ -1,5 +1,23 @@
 
 
+/*
+__Howto__
+// Initialisation avec vos paramètres
+odometry.initialize(150, 2000); // 150mm entre les roues, 2000 ticks par mètre
+// Dans votre boucle principale ou gestionnaire d'événements
+basic.forever(function() {
+// Obtenir les valeurs delta des encodeurs (à adapter selon votre système)
+let rightDelta = getEncoderRightDelta();
+let leftDelta = getEncoderLeftDelta();
+// Mettre à jour l'odométrie
+odometry.update(rightDelta, leftDelta);
+// Afficher les informations si nécessaire
+basic.showString("X:" + odometry.X + " Y:" + odometry.Y);
+})
+*/
+
+// Odometry module for MicroBit
+// Calculates position and orientation using wheel encoder data
 //% color="#0000BB" weight=99  block="Odometry"
 namespace odometry {
     // Global variables for position tracking
@@ -9,7 +27,7 @@ namespace odometry {
 
     // Constants - adjust these based on your robot's specifications
     export let entraxeInMM = 100;  // Distance between wheels in mm
-    export let ticksPerMeter = 2000;   // Number of ticks per meter
+    export let ticksPerMeter = 100000;   // Number of ticks per meter
 
     // Variables to store encoder deltas
     let dRight = 0;
@@ -118,11 +136,13 @@ namespace odometry {
             alphaRad += deltaTheta;
 
             // Limit heading to +/- PI to be able to turn in both directions
-            if (alphaRad > Math.PI) {
+            // Normalize angle to [-π, π]
+            alphaRad = normalizeAngle(alphaRad);
+            /*if (alphaRad > Math.PI) {
                 alphaRad -= 2 * Math.PI;
             } else if (alphaRad <= -Math.PI) {
                 alphaRad += 2 * Math.PI;
-            }
+            }*/
         }
     }
 
@@ -139,6 +159,23 @@ namespace odometry {
 
         // Call the regular update function
         update(leftDeltaMm, rightDeltaMm);
+    }
+
+    /**
+     * Normalize angle to the range [-π, π]
+     * @param angle Angle in radians to normalize
+     * @returns Normalized angle in range [-π, π]
+     */
+    //% block="Normalize angle %angle to range [-π, π]"
+    export function normalizeAngle(angle: number): number {
+        let result = angle;
+        while (result > Math.PI) {
+            result -= 2 * Math.PI;
+        }
+        while (result <= -Math.PI) {
+            result += 2 * Math.PI;
+        }
+        return result;
     }
 
     /**
@@ -208,22 +245,22 @@ namespace odometry {
      */
     //% block="angle to point x: %x|y: %y"
     export function angleTo(x: number, y: number): number {
-        let dx2 = x - X;
-        let dy2 = y - Y;
-        let targetAngle = Math.atan2(dy2, dx2);
+        let dx = x - X;
+        let dy = y - Y;
+        let targetAngle = Math.atan2(dy, dx);
 
         // Calculate the difference and normalize to [-π, π]
         let angleDiff = targetAngle - alphaRad;
-        while (angleDiff > Math.PI) {
-            angleDiff -= 2 * Math.PI;
-        }
-        while (angleDiff < -Math.PI) {
-            angleDiff += 2 * Math.PI;
-        }
-
-        return angleDiff;
+        return normalizeAngle(angleDiff);
     }
 }
+
+
+
+
+
+
+
 
 
 
