@@ -1,8 +1,3 @@
-/**
- * Odometry module for MicroBit
- * Calculates position and orientation using wheel encoder data
- */
-//% color="#0000BB" weight=99 block="Odometry"
 namespace odometry {
     // Global variables for position tracking
     export let X = 0;           // X position in mm
@@ -166,34 +161,15 @@ namespace odometry {
      */
     //% block="angle to point x: %x|y: %y"
     export function angleTo(x: number, y: number): number {
-        let dx = x - X;
-        let dy = y - Y;
-        let targetAngle = Math.atan2(dy, dx);
+        let dx2 = x - X;
+        let dy2 = y - Y;
+        let targetAngle = Math.atan2(dy2, dx2);
 
         // Calculate the difference and normalize to [-π, π]
         let angleDiff = targetAngle - alphaRad;
         return normalizeAngle(angleDiff);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * MotorDrivers namespace - Collection of predefined motor drivers
- * Add your custom drivers here
- */
-//% color="#FF4000" weight=98 icon="\uf1b0" block="MotorDrivers"
 namespace MotorDrivers {
     // Motor direction enum
     export enum Direction {
@@ -262,9 +238,9 @@ namespace MotorDrivers {
 
             // Apply direction and speed to right motor
             if (rightSpeed > 0) {
-                let directionFactor = (rightDir === Direction.Forward) ? 1 : -1;
-                if (this.rightInverted) directionFactor *= -1;
-                rightValue = 90 + directionFactor * Math.map(rightSpeed, 0, 100, 0, 90);
+                let directionFactor2 = (rightDir === Direction.Forward) ? 1 : -1;
+                if (this.rightInverted) directionFactor2 *= -1;
+                rightValue = 90 + directionFactor2 * Math.map(rightSpeed, 0, 100, 0, 90);
             }
 
             // Ensure values are in valid range
@@ -460,12 +436,6 @@ namespace MotorDrivers {
         return new MotorLibraryAdapter(leftPin, rightPin);
     }
 }
-
-/**
- * Robot Movement Controller
- * Provides high-level movement controls for a differential-drive robot
- */
-//% color="#00A1E9" weight=100 icon="\uf1b9" block="RobotMovement"
 namespace RobotMovement {
     // PID constants for movement control
     const DEFAULT_KP = 0.5;   // Proportional gain
@@ -706,7 +676,7 @@ namespace RobotMovement {
         motorDriver.setMotorSpeed(baseSpeed, baseSpeed, leftDir, rightDir);
 
         // Movement control loop
-        const startTime = input.runningTime();
+        const startTime2 = input.runningTime();
         while (true) {
             // Note: Odometry is updated separately in a 50ms loop
 
@@ -720,24 +690,24 @@ namespace RobotMovement {
             }
 
             // Apply PID control
-            const correction = applyPID(error);
+            const correction2 = applyPID(error);
 
             // Apply speeds based on turn direction
-            let leftSpeed = baseSpeed + correction;
-            let rightSpeed = baseSpeed - correction;
+            let leftSpeed2 = baseSpeed + correction2;
+            let rightSpeed2 = baseSpeed - correction2;
 
             // Ensure speeds are valid
-            leftSpeed = Math.constrain(leftSpeed, 0, 100);
-            rightSpeed = Math.constrain(rightSpeed, 0, 100);
+            leftSpeed2 = Math.constrain(leftSpeed2, 0, 100);
+            rightSpeed2 = Math.constrain(rightSpeed2, 0, 100);
 
             // Apply to motors
             motorDriver.setMotorSpeed(
-                leftSpeed, rightSpeed,
+                leftSpeed2, rightSpeed2,
                 leftDir, rightDir
             );
 
             // Check timeout
-            if (input.runningTime() - startTime > MOVEMENT_TIMEOUT) {
+            if (input.runningTime() - startTime2 > MOVEMENT_TIMEOUT) {
                 serial.writeLine("Turn timeout");
                 break;
             }
@@ -767,22 +737,22 @@ namespace RobotMovement {
         // Calculate target position in global coordinates
         const currentX = odometry.getX();
         const currentY = odometry.getY();
-        const currentAngle = odometry.getOrientationRad();
+        const currentAngle2 = odometry.getOrientationRad();
 
         // Transform from robot-relative to global coordinates
-        const cosAngle = Math.cos(currentAngle);
-        const sinAngle = Math.sin(currentAngle);
-        const targetX = currentX + x * cosAngle - y * sinAngle;
-        const targetY = currentY + x * sinAngle + y * cosAngle;
+        const cosAngle = Math.cos(currentAngle2);
+        const sinAngle = Math.sin(currentAngle2);
+        const targetX2 = currentX + x * cosAngle - y * sinAngle;
+        const targetY2 = currentY + x * sinAngle + y * cosAngle;
 
         // Calculate required angle and distance
-        const deltaX = targetX - currentX;
-        const deltaY = targetY - currentY;
+        const deltaX = targetX2 - currentX;
+        const deltaY = targetY2 - currentY;
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        const targetAngle = Math.atan2(deltaY, deltaX);
+        const targetAngle2 = Math.atan2(deltaY, deltaX);
 
         // Angle to turn
-        const angleToTurn = angleBetween(targetAngle, currentAngle);
+        const angleToTurn = angleBetween(targetAngle2, currentAngle2);
         const angleDegrees = angleToTurn * 180 / Math.PI;
 
         // First turn to face the target
@@ -819,64 +789,3 @@ namespace RobotMovement {
         });
     }
 }
-
-/**
- * Exemple simple d'utilisation du robot avec mise à jour d'odométrie
- */
-/*
-namespace Exemple {
-
-    //% block="Exemple d'utilisation du robot"
-    export function exempleUtilisation(): void {
-        // Initialisation de l'odométrie
-        odometry.initialize(150, 2000); // 150mm entre les roues, 2000 ticks par mètre
-
-        // Création du pilote moteur (servomoteurs continus)
-        let moteurs = MotorDrivers.createServoDriver(AnalogPin.P1, AnalogPin.P2);
-
-        // Initialisation du contrôleur de mouvement
-        RobotMovement.initialize(moteurs);
-
-        // Configuration du PID (optionnel)
-        RobotMovement.configurePID(0.5, 0.05, 0.2);
-
-        // Définition de la vitesse de base
-        RobotMovement.setBaseSpeed(60);
-
-        // Fonction pour lire les encodeurs (à adapter selon votre hardware)
-        let dernierTicksGauche = 0;
-        let dernierTicksDroite = 0;
-
-        // Démarrage de la mise à jour d'odométrie en arrière-plan
-        RobotMovement.startOdometryUpdateLoop(
-            // Fonction pour obtenir le delta de l'encodeur gauche
-            () => {
-                // Ceci est à adapter en fonction de votre système d'encodeurs
-                // Par exemple en lisant des pins analogiques, I2C, etc.
-                const nouveauxTicksGauche = pins.analogReadPin(AnalogPin.P3);
-                const deltaGauche = nouveauxTicksGauche - dernierTicksGauche;
-                dernierTicksGauche = nouveauxTicksGauche;
-                return deltaGauche;
-            },
-            // Fonction pour obtenir le delta de l'encodeur droit
-            () => {
-                const nouveauxTicksDroite = pins.analogReadPin(AnalogPin.P4);
-                const deltaDroite = nouveauxTicksDroite - dernierTicksDroite;
-                dernierTicksDroite = nouveauxTicksDroite;
-                return deltaDroite;
-            }
-        );
-
-        // Exemple de séquence de mouvements
-        basic.pause(1000);
-        RobotMovement.moveForward(200); // Avance de 200mm
-        basic.pause(500);
-        RobotMovement.turn(90);         // Tourne de 90°
-        basic.pause(500);
-        RobotMovement.moveRelative(0, 100); // Déplacement latéral de 100mm
-        basic.pause(500);
-        RobotMovement.stop();
-    }
-
-    
-}*/
